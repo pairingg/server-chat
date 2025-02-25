@@ -1,1 +1,3 @@
-export class CreateChatroomDto {}
+export class CreateChatroomDto {
+  memberId: number;
+}

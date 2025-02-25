@@ -1,34 +1,45 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Headers } from '@nestjs/common';
 import { ChatroomService } from './chatroom.service';
 import { CreateChatroomDto } from './dto/create-chatroom.dto';
-import { UpdateChatroomDto } from './dto/update-chatroom.dto';
+import { ClaimDto } from './dto/claim-dto';
 
-@Controller('chatroom')
+@Controller('chatrooms')
 export class ChatroomController {
-  constructor(private readonly chatroomService: ChatroomService) {}
+  constructor(private readonly chatroomService: ChatroomService,
+  ) {}
 
+  /**
+   * 채팅방 생성
+   * @param createChatroomDto 
+   * @returns 
+   */
   @Post()
-  create(@Body() createChatroomDto: CreateChatroomDto) {
-    return this.chatroomService.create(createChatroomDto);
+  create(@Headers('X-Authorization-memberId') userId: string, @Body() createChatroomDto: CreateChatroomDto) {
+    return this.chatroomService.create(+userId, createChatroomDto);
   }
 
+  /**
+   * 채팅방 전체 조회
+   * @returns 
+   */
   @Get()
-  findAll() {
-    return this.chatroomService.findAll();
+  findAll(@Headers('X-Authorization-memberId') userId: number) {
+    return this.chatroomService.findAll(+userId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.chatroomService.findOne(+id);
+  @Post(':chatroomId/claim')
+  claim(
+    @Param('chatroomId') chatroomId: string,
+    @Body() claimDto: ClaimDto
+  ) {
+    return this.chatroomService.claim(+chatroomId, claimDto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateChatroomDto: UpdateChatroomDto) {
-    return this.chatroomService.update(+id, updateChatroomDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.chatroomService.remove(+id);
-  }
+  @Post(':chatroomId/read')
+  async markAsRead(
+    @Param('chatroomId') chatroomId: string,
+    @Headers('X-Authorization-memberId') userId: string
+  ) {
+    return this.chatroomService.markAsRead(+chatroomId, +userId);
+  }2
 }

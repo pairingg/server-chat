@@ -1,20 +1,41 @@
-import { WebSocketGateway, SubscribeMessage, MessageBody } from '@nestjs/websockets';
+import { WebSocketGateway, SubscribeMessage, MessageBody, WebSocketServer } from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
 import { ChattingService } from './chatting.service';
 import { CreateChattingDto } from './dto/create-chatting.dto';
 import { UpdateChattingDto } from './dto/update-chatting.dto';
+import { FindAllChattingDto } from './dto/findAll-chatting.dto';
+import { ChatroomService } from '../chatroom/chatroom.service';
 
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: {
+    origin: '*',
+  },
+  namespace: '/chat',
+  port: 3000
+})
 export class ChattingGateway {
-  constructor(private readonly chattingService: ChattingService) {}
+  @WebSocketServer()
+  server: Server;
 
-  @SubscribeMessage('createChatting')
-  create(@MessageBody() createChattingDto: CreateChattingDto) {
-    return this.chattingService.create(createChattingDto);
+  constructor(
+    private readonly chattingService: ChattingService,
+    private readonly chatroomService: ChatroomService
+  ) {}
+
+  @SubscribeMessage('sendChatting')
+  async create(@MessageBody() createChattingDto: CreateChattingDto) {
+    console.log(createChattingDto);
+    const chatting = await this.chattingService.sendChatting(createChattingDto);
+    console.log(chatting);
+    this.server.emit('receiveChatting', chatting);
+    return chatting;
   }
 
   @SubscribeMessage('findAllChatting')
-  findAll() {
-    return this.chattingService.findAll();
+  async findAll(@MessageBody() findAllChattingDto: FindAllChattingDto) {
+    const chatting = await this.chattingService.findAll(findAllChattingDto.chatroomId);
+    this.server.emit(`receiveChatting`, chatting);
+    return chatting;
   }
 
   @SubscribeMessage('findOneChatting')
@@ -22,7 +43,7 @@ export class ChattingGateway {
     return this.chattingService.findOne(id);
   }
 
-  @SubscribeMessage('updateChatting')
+  @SubscribeMessage('findAllChattingrooms')
   update(@MessageBody() updateChattingDto: UpdateChattingDto) {
     return this.chattingService.update(updateChattingDto.id, updateChattingDto);
   }
@@ -30,5 +51,16 @@ export class ChattingGateway {
   @SubscribeMessage('removeChatting')
   remove(@MessageBody() id: number) {
     return this.chattingService.remove(id);
+  }
+
+  @SubscribeMessage('readMessages')
+  async handleReadMessages(
+    @MessageBody() data: { userId: number; chatroomId: number }
+  ) {
+    await this.chatroomService.markAsRead(data.chatroomId, data.userId);
+    this.server.emit('updateReadStatus', {
+      userId: data.userId,
+      chatroomId: data.chatroomId
+    });
   }
 }
