@@ -7,6 +7,9 @@ import { Chatroom, ChatroomDocument } from './schemas/chatroom.schemas';
 import { ClaimDto } from './dto/claim-dto';
 import { Chatting, ChattingDocument } from '../chatting/schemas/chatting.schema';
 import { ReadReceipt, ReadReceiptDocument } from '../chatting/schemas/read-receipt.schema';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 @Injectable()
 export class ChatroomService {
@@ -25,8 +28,8 @@ export class ChatroomService {
     return createdChatroom.save();
   }
 
-  async findAll(memberId: number): Promise<Chatroom[]> {
-    return this.chatroomModel
+  async findAll(memberId: number): Promise<any[]> {
+    const chatrooms = await this.chatroomModel
       .find({
         $or: [
           { member1Id: memberId },
@@ -35,6 +38,23 @@ export class ChatroomService {
       })
       .sort({ createdAt: -1 })
       .exec();
+
+    const chatroomDetails = await Promise.all(chatrooms.map(async (chatroom) => {
+      const otherMemberId = chatroom.member1Id === memberId ? chatroom.member2Id : chatroom.member1Id;
+      const { name, profileImage } = await this.findIcon(otherMemberId);
+      const messageCnt = await this.getUnreadCount(chatroom.chatroomId, memberId);
+
+      return {
+        id: chatroom.chatroomId,
+        name,
+        createdAt: chatroom.createdAt,
+        message: '채팅방 리스트',
+        profileImage,
+        messageCnt,
+      };
+    }));
+
+    return chatroomDetails;
   }
 
   async markAsRead(chatroomId: number, userId: number): Promise<void> {
@@ -107,5 +127,21 @@ export class ChatroomService {
 
   remove(id: number) {
     return `This action removes a #${id} chatroom`;
+  }
+
+  async findIcon(id: number): Promise<{ name: string, profileImage: string }> {
+    try {
+      const response = await fetch(`${process.env.MEMBER_ICON_URL}`, {
+        headers: {
+          'X-Authorization-memberId': id.toString()
+        }
+      });
+
+      const data = await response.json();
+      return { name: data.name, profileImage: data.profileImage };
+    } catch (error) {
+      console.error('Error fetching icon:', error);
+      return { name: 'Unknown', profileImage: '' };
+    }
   }
 }
