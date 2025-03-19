@@ -19,8 +19,12 @@ import { Logger } from '@nestjs/common';
 @WebSocketGateway({
   cors: {
     origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true,
   },
-  namespace: '/chat'
+  namespace: '/chat',
+  transports: ['websocket'],
+  path: '/socket.io'  // 기본 Socket.IO 경로
 })
 export class ChattingGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
