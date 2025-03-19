@@ -20,8 +20,7 @@ import { Logger } from '@nestjs/common';
   cors: {
     origin: '*',
   },
-  namespace: '/chat',
-  port: 3000
+  namespace: '/chat'
 })
 export class ChattingGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
