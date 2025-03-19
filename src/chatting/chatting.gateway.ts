@@ -24,7 +24,9 @@ import { Logger } from '@nestjs/common';
   },
   namespace: '/chat',
   transports: ['websocket'],
-  path: '/socket.io'  // 기본 Socket.IO 경로
+  path: '/socket.io',
+  secure: false,  // SSL/TLS 비활성화
+  wsEngine: 'ws'  // ws 엔진 사용
 })
 export class ChattingGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
